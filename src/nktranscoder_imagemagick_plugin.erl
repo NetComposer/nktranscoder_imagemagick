@@ -18,7 +18,18 @@
 %%
 %% -------------------------------------------------------------------
 -module(nktranscoder_imagemagick_plugin).
--export([plugin_deps/0]).
+-export([plugin_deps/0, plugin_config/3]).
 
 plugin_deps() ->
-    [].
+    [nktranscoder].
+
+
+
+plugin_config(_SrvId, Config, _Service) ->
+    Syntax = #{
+        max_conversion_time => {integer, 1000, none},
+        '__defaults' => #{
+            max_conversion_time => 120000
+        }
+    },
+    nkserver_util:parse_config(Config, Syntax).

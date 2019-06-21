@@ -19,7 +19,7 @@
 %% -------------------------------------------------------------------
 
 -module(nktranscoder_imagemagick_callbacks).
--export([msg/1]).
+-export([msg/1, transcoder_operation/5]).
 -include("nktranscoder_imagemagick.hrl").
 
 
@@ -31,3 +31,8 @@ msg(_)   		                    -> continue.
 
 
 
+transcoder_operation(SrvId, [<<"thumbnail">>, <<"imagemagick">>], Params, CT, File) ->
+    nktranscoder_imagemagick_util:thumbnail(SrvId, CT, File, Params);
+
+transcoder_operation(_, _, _Params, _CT, _File) ->
+    continue.
