@@ -1,0 +1,12 @@
+{application, nktranscoder_imagemagick, [
+    {description, "NkSERVER TRANSCODER ImageMagick Plugin"},
+    {vsn, "develop"},
+    {modules, []},
+    {registered, []},
+    {mod, {nktranscoder_imagemagick_app, []}},
+    {applications, [
+        nktranscoder
+    ]},
+    {env, [
+    ]}
+]}.
