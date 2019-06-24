@@ -18,60 +18,23 @@
 %%
 %% -------------------------------------------------------------------
 -module(nktranscoder_imagemagick_sample).
--export([test_inline_inline/0, test_http_inline/0]).
-
--define(ECHO_URL, "http://127.0.0.1:9001/transcoder/v1/thumbnail/imagemagick").
-
+-export([test_http_inline/0]).
 
 
 %% @doc
-% File in http body, response in http response
-test_inline_inline() ->
-    Hds = [{<<"Content-Type">>, <<"ct1/ct2">>}],
-    Body = <<"1234">>,
-    {T1, {ok, 200, RepHds, Body}} = call_echo(#{}, Hds, Body),
-    <<"ct1/ct2">> = nklib_util:get_value(<<"content-type">>, RepHds),
-    {T1, RepHds}.
-
-
-
 %% @doc
 % File in external http, response in http response
 test_http_inline() ->
     Params = #{
-        format => <<"var1=1;var2=b">>,
+        format => <<"image;size=10000">>,
         input_type => http,
         input_http_url => <<"https://kbob.github.io/images/sample-4.jpg">>
     },
-    call_echo(Params, [], <<>>).
-
-
+    call_thumbnail(Params, [], <<>>).
 
 
 
 %% @private
-call_echo(Params, Hds, Body) ->
-    Params2 = [
-        list_to_binary([
-            nklib_util:to_binary(K),
-            $=,
-            http_uri:encode(nklib_util:to_binary(V))
-        ])
-        || {K, V} <- maps:to_list(Params)
-    ],
-    Params3 = nklib_util:bjoin(Params2, <<"&">>),
-    Url = case Params3 of
-        <<>> ->
-            ?ECHO_URL;
-        _ ->
-            <<?ECHO_URL, "?", Params3/binary>>
-    end,
-    lager:notice("NKLOG URL ~s", [Url]),
-    Opts = [
-        with_body,
-        {recv_timeout, 180000}
-    ],
-    Start = nklib_date:epoch(usecs),
-    R = hackney:request(post, Url, Hds, Body, Opts),
-    Time = nklib_date:epoch(usecs) - Start,
-    {Time, R}.
+call_thumbnail(Params, Hds, Body) ->
+    nktranscoder_sample:call(<<"thumbnail/imagemagick">>, Params, Hds, Body).
+
