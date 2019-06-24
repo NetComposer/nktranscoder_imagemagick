@@ -31,8 +31,11 @@ msg(_)   		                    -> continue.
 
 
 
-transcoder_operation(SrvId, [<<"thumbnail">>, <<"imagemagick">>], Params, CT, File) ->
+transcoder_operation(SrvId, <<"thumbnail/imagemagick">>, CT, File, Params) ->
     nktranscoder_imagemagick_util:thumbnail(SrvId, CT, File, Params);
 
-transcoder_operation(_, _, _Params, _CT, _File) ->
+transcoder_operation(SrvId, <<"thumbnail">>, CT, File, Params) ->
+    nktranscoder_imagemagick_util:thumbnail(SrvId, CT, File, Params);
+
+transcoder_operation(_, _Op, _Params, _CT, _File) ->
     continue.
