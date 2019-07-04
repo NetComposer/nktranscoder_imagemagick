@@ -18,10 +18,9 @@
 %%
 %% -------------------------------------------------------------------
 -module(nktranscoder_imagemagick_sample).
--export([test_http_inline/0]).
+-export([test_http_inline/0, test_inline_inline/0]).
 
 
-%% @doc
 %% @doc
 % File in external http, response in http response
 test_http_inline() ->
@@ -32,6 +31,14 @@ test_http_inline() ->
     },
     call_thumbnail(Params, [], <<>>).
 
+
+test_inline_inline() ->
+    {ok, 200, _, Ref} = hackney:request(<<"https://kbob.github.io/images/sample-4.jpg">>),
+    {ok, Body} = hackney:body(Ref),
+    Hds = [{<<"Content-Type">>, <<"image/jpg">>}],
+    {T1, {ok, 200, RepHds, Body}} = nktranscoder_sample:call(<<"thumbnail">>, #{}, Hds, Body),
+    <<"image/jpeg">> = nklib_util:get_value(<<"content-type">>, RepHds),
+    {T1, RepHds}.
 
 
 %% @private
