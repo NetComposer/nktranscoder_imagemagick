@@ -26,51 +26,67 @@ thumbnail(SrvId, CT, File, Params) ->
     Format = maps:get(format, Params, []),
     Syntax = #{
         image => #{
-            size => integer
+            size => integer, % Input File's size
+            out_ext => binary, % Input File's extension
+            '__defaults' => #{
+                size => 100,
+                out_ext => <<"png">>
+            }
         }
     },
+
     case nklib_syntax:parse(Format, Syntax) of
-        {ok, Parsed, []} ->
+        {ok, Parsed, _} ->
+            % Get image from parsed tokens
             Image = maps:get(image, Parsed, #{}),
-            Size = maps:get(size, Image, 1024),
+            % Get image from parsed tokens
+            Size = maps:get(size, Image, 90),
+            % Get input extension from parsed tokens
+            InExt = getExtensionFromCT(CT),
+            % Get image from parsed tokens
+            OutExt = maps:get(out_ext, Image, <<"png">>),
             #{max_conversion_time:=Time} = nkserver:get_config(SrvId),
             nkserver_ot:log(?MODULE, "options parsed: ~p", [Parsed]),
-            lager:notice("Starting thumbnail conversion (CT:~p, time:~p size:~p", [CT, Time, Size]),
+            lager:notice("Starting thumbnail conversion (CT:~p, time:~p Size:~p, InExtension:~p, OutExtension: ~p", [CT, Time, Size, InExt, OutExt]),
             nkserver_ot:log(?MODULE, <<"writing file">>),
             BaseName = <<"/tmp/trans-", (nklib_util:luid())/binary>>,
-            try
-                ok = file:write_file(<<BaseName/binary, ".jpeg">>, File),
-                nkserver_ot:log(?MODULE, <<"starting conversion">>),
-                Cmd = list_to_binary([
-                    "convert ",
-                    BaseName, ".jpeg ",
-                    "-auto-orient ",
-                    "-thumbnail 250x", integer_to_binary(Size), " ",
-                    "-unsharp 0x.5 ",
-                    BaseName, ".png"
-                ]),
-                nkserver_ot:tag(?MODULE, <<"transcoder.cmd">>, Cmd),
-                lager:error("NKLOG CMD ~p", [Cmd]),
-                {ok, _} = nklib_exec:sync(Cmd, #{timeout=>Time}),
-                nkserver_ot:log(?MODULE, <<"conversion finished">>),
-                nkserver_ot:log(?MODULE, <<"writting file">>),
-                {ok, File2} = file:read_file(<<BaseName/binary, ".png">>),
-                nkserver_ot:log(?MODULE, <<"file wrote">>),
-                nkserver_ot:finish(?MODULE),
-                {ok, {<<"image/png">>, File2, #{}}}
-            catch
-                error:Error  ->
-                    {error, {thumbnail_error, Error}}
-            after
-                file:delete(<<BaseName/binary, ".jpeg">>),
-                file:delete(<<BaseName/binary, ".png">>),
-                nkserver_ot:finish(?MODULE)
-            end;
+
+            ok = file:write_file(<<BaseName/binary, ".", InExt/binary>>, File),
+            nkserver_ot:log(?MODULE, <<"starting conversion">>),
+            Cmd = list_to_binary([
+                "convert ",
+                BaseName, ".", InExt,
+                " -auto-orient ",
+                "-thumbnail 250x", integer_to_binary(Size), " ",
+                "-unsharp 0x.5 ",
+                BaseName, ".", OutExt
+            ]),
+            nkserver_ot:tag(?MODULE, <<"transcoder.cmd">>, Cmd),
+            lager:notice("NKLOG CMD ~p", [Cmd]),
+            {ok, _} = nklib_exec:sync(Cmd, #{timeout=>Time}),
+
+            nkserver_ot:log(?MODULE, <<"conversion finished">>),
+            nkserver_ot:log(?MODULE, <<"writting file">>),
+
+            {ok, File2} = file:read_file(<<BaseName/binary, ".", OutExt/binary>>),
+
+            nkserver_ot:log(?MODULE, <<"file written">>),
+
+            file:delete(<<BaseName/binary, ".", InExt/binary>>),
+            file:delete(<<BaseName/binary, ".", OutExt/binary>>),
+        
+            nkserver_ot:finish(?MODULE),
+            {ok, {CT, File2, #{}}};
+
         {error, Error} ->
             {error, {thumbnail_error, Error}}
     end.
 
+getExtensionFromCT(<<"image/png">>) ->
+    <<"png">>;
 
+getExtensionFromCT(<<"image/gif">>) ->
+    <<"gif">>;
 
-
-
+getExtensionFromCT(_) ->
+    <<"png">>.
